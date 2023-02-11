@@ -1,3 +1,6 @@
+mod app;
+
 fn main() {
-    println!("Hello, Mulch!");
+    let app = app::App::new();
+    app.run();
 }
