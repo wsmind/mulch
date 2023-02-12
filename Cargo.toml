@@ -6,4 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+futures = "0.3.26"
+raw-window-handle = "0.5.0"
+wgpu = { version = "0.15.1", features = ["spirv"] }
 winit = "0.28.1"
+
+[build-dependencies]
+shaderc = "0.8.2"
