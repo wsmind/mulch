@@ -1,4 +1,5 @@
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -23,18 +24,25 @@ fn extract_shader_kind(path_str: &str) -> Option<shaderc::ShaderKind> {
     return None;
 }
 
-fn main() {
-    println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=shaders");
+fn build_shaders(
+    folder: &OsString,
+    include_root: &OsString,
+    out_dir: &OsString,
+    compiler: &shaderc::Compiler,
+    modules: &mut Vec<ModuleDescriptor>,
+) {
+    println!("scanning '{}'", folder.to_string_lossy());
 
-    let out_dir = env::var_os("OUT_DIR").unwrap();
-    fs::create_dir_all(Path::new(&out_dir).join("shaders")).unwrap();
+    fs::create_dir_all(Path::new(&out_dir).join(folder)).unwrap();
 
-    let mut modules = Vec::new();
-
-    let compiler = shaderc::Compiler::new().unwrap();
-    for file in fs::read_dir("shaders").unwrap() {
+    for file in fs::read_dir(folder).unwrap() {
         let source_path = file.unwrap().path();
+        if source_path.is_dir() {
+            let subfolder = OsString::from(source_path);
+            build_shaders(&subfolder, include_root, out_dir, compiler, modules);
+            continue;
+        }
+
         let source_path_str = source_path.to_string_lossy();
         let source_text = fs::read_to_string(&source_path).unwrap();
 
@@ -50,7 +58,7 @@ fn main() {
              parent: &str,
              _include_depth: usize|
              -> shaderc::IncludeCallbackResult {
-                let content = fs::read_to_string(Path::new("shaders").join(filename));
+                let content = fs::read_to_string(Path::new(include_root).join(filename));
 
                 if content.is_err() {
                     panic!(
@@ -82,13 +90,14 @@ fn main() {
         fs::write(&output_path, spirv.as_binary_u8()).unwrap();
 
         let input_file_name = source_path
-            .file_name()
+            .strip_prefix(include_root)
             .unwrap()
             .to_string_lossy()
-            .to_string();
+            .to_string()
+            .replace("\\", "/");
 
         let output_file_name = output_path
-            .strip_prefix(&out_dir)
+            .strip_prefix(out_dir)
             .unwrap()
             .to_string_lossy()
             .to_string();
@@ -98,6 +107,24 @@ fn main() {
             output_file_name,
         });
     }
+}
+
+fn main() {
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=shaders");
+
+    let out_dir = env::var_os("OUT_DIR").unwrap();
+    let compiler = shaderc::Compiler::new().unwrap();
+    let mut modules = Vec::new();
+
+    let root_folder = OsString::from("shaders");
+    build_shaders(
+        &root_folder,
+        &root_folder,
+        &out_dir,
+        &compiler,
+        &mut modules,
+    );
 
     println!("Modules: {:?}", modules);
     let modules_file_path = Path::new(&out_dir).join("shader_modules.rs");
@@ -108,7 +135,9 @@ fn main() {
         "
         use std::collections::HashMap;
 
-        pub fn load(device: &wgpu::Device) -> HashMap<&'static str, wgpu::ShaderModule> {{
+        pub type ShaderModules = HashMap<&'static str, wgpu::ShaderModule>;
+
+        pub fn load(device: &wgpu::Device) -> ShaderModules {{
             HashMap::from([
         "
     )
@@ -117,7 +146,7 @@ fn main() {
     for module in modules {
         writeln!(
             &mut modules_file,
-            "(\"{}\", device.create_shader_module(&wgpu::ShaderModuleDescriptor {{
+            "(\"{}\", device.create_shader_module(wgpu::ShaderModuleDescriptor {{
                 label: Some(\"{}\"),
                 source: wgpu::util::make_spirv(include_bytes!(r\"{}\")),
             }})),",
