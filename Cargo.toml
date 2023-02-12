@@ -6,6 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytemuck = "1.13.0"
+clipboard-win = "4.5.0"
+egui = { version = "0.21.0", features = [ "bytemuck", "serde" ] }
+egui_demo_lib = "0.21.0"
 futures = "0.3.26"
 raw-window-handle = "0.5.0"
 wgpu = { version = "0.15.1", features = ["spirv"] }

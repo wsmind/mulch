@@ -4,7 +4,9 @@ use winit::{
     window::WindowBuilder,
 };
 
+use crate::editor;
 use crate::render;
+use crate::ui;
 
 pub struct App {}
 
@@ -24,9 +26,12 @@ impl App {
         let window_size = window.inner_size();
         let mut renderer = render::Renderer::new(&window, [window_size.width, window_size.height]);
 
-        //let start_time = std::time::Instant::now();
+        let mut ui_context = ui::UiContext::new();
+        let mut editor = editor::Editor::new();
 
         window.set_maximized(true);
+
+        let start_time = std::time::Instant::now();
 
         event_loop.run(move |event, _, control_flow| match event {
             Event::WindowEvent { ref event, .. } => match event {
@@ -34,12 +39,16 @@ impl App {
                 WindowEvent::Resized(new_size) => {
                     renderer.resize([new_size.width, new_size.height]);
                 }
-                _ => {}
+                _ => ui_context.handle_event(event),
             },
 
             Event::RedrawRequested(_) => {
-                //let time = start_time.elapsed().as_secs_f64();
-                renderer.render();
+                let time = start_time.elapsed().as_secs_f64();
+                let window_size = window.inner_size();
+
+                let ui_render_data = ui_context.run(window_size, time, |ctx| editor.run(ctx));
+
+                renderer.render(&ui_render_data);
             }
 
             Event::MainEventsCleared => {

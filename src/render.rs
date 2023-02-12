@@ -1,4 +1,10 @@
+mod shaders;
+mod ui;
+
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
+
+use crate::render::ui::UiRenderer;
+use crate::ui::UiRenderData;
 
 pub struct Renderer {
     device: wgpu::Device,
@@ -8,6 +14,8 @@ pub struct Renderer {
 
     recreate_targets: bool,
     depth_target_view: Option<wgpu::TextureView>,
+
+    ui_renderer: UiRenderer,
 }
 
 impl Renderer {
@@ -43,7 +51,7 @@ impl Renderer {
 
         let surface_caps = surface.get_capabilities(&adapter);
 
-        let surface_format = surface_caps
+        let surface_format = *surface_caps
             .formats
             .iter()
             .filter(|format| !format.describe().srgb)
@@ -52,7 +60,7 @@ impl Renderer {
 
         let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: *surface_format,
+            format: surface_format,
             width: window_size[0],
             height: window_size[1],
             present_mode: wgpu::PresentMode::Fifo,
@@ -62,6 +70,10 @@ impl Renderer {
 
         println!("{:?}", surface_config);
 
+        let modules = shaders::load(&device);
+
+        let ui_renderer = UiRenderer::new(&device, &modules, surface_format);
+
         Self {
             device,
             queue,
@@ -70,6 +82,8 @@ impl Renderer {
 
             recreate_targets: true,
             depth_target_view: None,
+
+            ui_renderer,
         }
     }
 
@@ -112,7 +126,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self) {
+    pub fn render(&mut self, ui_render_data: &UiRenderData) {
         self.refresh_targets();
 
         let current_texture = self.surface.get_current_texture();
@@ -161,6 +175,21 @@ impl Renderer {
                 }),
             });
         }
+
+        let ui_viewport = ui::UiViewport {
+            size_in_pixels: [self.surface_config.width, self.surface_config.height],
+            pixels_per_point: ui_render_data.pixels_per_point,
+        };
+
+        self.ui_renderer.render(
+            &self.device,
+            &self.queue,
+            &mut encoder,
+            color_target_view,
+            &ui_render_data.textures_delta,
+            &ui_render_data.clipped_primitives,
+            ui_viewport,
+        );
 
         let command_buffer = encoder.finish();
         self.queue.submit(std::iter::once(command_buffer));
