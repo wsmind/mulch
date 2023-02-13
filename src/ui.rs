@@ -1,6 +1,6 @@
 use clipboard_win::{formats, get_clipboard, set_clipboard};
 use egui::*;
-use winit::{dpi::PhysicalSize, event::*};
+use winit::event::*;
 
 pub struct UiRenderData {
     pub textures_delta: TexturesDelta,
@@ -14,6 +14,7 @@ pub struct UiContext {
     last_mouse_position: Pos2,
     initial_pixels_per_point: f32,
     modifiers_state: ModifiersState,
+    current_cursor_icon: Option<CursorIcon>,
 }
 
 impl UiContext {
@@ -29,6 +30,7 @@ impl UiContext {
             last_mouse_position: pos2(0.0, 0.0),
             initial_pixels_per_point,
             modifiers_state: ModifiersState::empty(),
+            current_cursor_icon: None,
         }
     }
 
@@ -73,7 +75,7 @@ impl UiContext {
 
             WindowEvent::CursorMoved { position, .. } => {
                 let pixels_per_point = self.ctx.pixels_per_point();
-                let pos = egui::pos2(
+                let pos = pos2(
                     position.x as f32 / pixels_per_point,
                     position.y as f32 / pixels_per_point,
                 );
@@ -85,10 +87,10 @@ impl UiContext {
                 self.events.push(egui::Event::PointerButton {
                     pos: self.last_mouse_position,
                     button: match button {
-                        MouseButton::Left => egui::PointerButton::Primary,
-                        MouseButton::Right => egui::PointerButton::Secondary,
-                        MouseButton::Middle => egui::PointerButton::Middle,
-                        _ => egui::PointerButton::Extra1,
+                        MouseButton::Left => PointerButton::Primary,
+                        MouseButton::Right => PointerButton::Secondary,
+                        MouseButton::Middle => PointerButton::Middle,
+                        _ => PointerButton::Extra1,
                     },
                     pressed: match state {
                         ElementState::Pressed => true,
@@ -117,19 +119,20 @@ impl UiContext {
 
     pub fn run(
         &mut self,
-        window_size: PhysicalSize<u32>,
+        window: &winit::window::Window,
         time: f64,
         run_ui: impl FnOnce(&Context),
     ) -> UiRenderData {
         let events = self.events.clone();
         self.events.clear();
 
+        let window_size = window.inner_size();
         let pixels_per_point = self.ctx.pixels_per_point();
 
-        let egui_input = egui::RawInput {
-            screen_rect: Some(egui::Rect {
-                min: egui::pos2(0.0, 0.0),
-                max: egui::pos2(
+        let input = RawInput {
+            screen_rect: Some(Rect {
+                min: pos2(0.0, 0.0),
+                max: pos2(
                     window_size.width as f32 / pixels_per_point,
                     window_size.height as f32 / pixels_per_point,
                 ),
@@ -139,18 +142,29 @@ impl UiContext {
             events,
             ..Default::default()
         };
-        let egui_output = self.ctx.run(egui_input, |ctx| {
-            egui::gui_zoom::zoom_with_keyboard_shortcuts(&ctx, Some(self.initial_pixels_per_point));
+        let output = self.ctx.run(input, |ctx| {
+            gui_zoom::zoom_with_keyboard_shortcuts(&ctx, Some(self.initial_pixels_per_point));
             run_ui(ctx);
         });
 
-        let copied_text = &egui_output.platform_output.copied_text;
+        let copied_text = &output.platform_output.copied_text;
         if !copied_text.is_empty() {
             set_clipboard(formats::Unicode, copied_text).unwrap();
         }
 
-        let textures_delta = egui_output.textures_delta;
-        let clipped_primitives = self.ctx.tessellate(egui_output.shapes);
+        if self.current_cursor_icon != Some(output.platform_output.cursor_icon) {
+            self.current_cursor_icon = Some(output.platform_output.cursor_icon);
+            match egui_to_winit_cursor_icon(output.platform_output.cursor_icon) {
+                None => window.set_cursor_visible(false),
+                Some(cursor_icon) => {
+                    window.set_cursor_icon(cursor_icon);
+                    window.set_cursor_visible(true);
+                }
+            }
+        }
+
+        let textures_delta = output.textures_delta;
+        let clipped_primitives = self.ctx.tessellate(output.shapes);
 
         UiRenderData {
             textures_delta,
@@ -160,101 +174,142 @@ impl UiContext {
     }
 }
 
-fn winit_to_egui_keycode(key: VirtualKeyCode) -> Option<egui::Key> {
+fn winit_to_egui_keycode(key: VirtualKeyCode) -> Option<Key> {
     Some(match key {
-        VirtualKeyCode::Down => egui::Key::ArrowDown,
-        VirtualKeyCode::Left => egui::Key::ArrowLeft,
-        VirtualKeyCode::Right => egui::Key::ArrowRight,
-        VirtualKeyCode::Up => egui::Key::ArrowUp,
+        VirtualKeyCode::Down => Key::ArrowDown,
+        VirtualKeyCode::Left => Key::ArrowLeft,
+        VirtualKeyCode::Right => Key::ArrowRight,
+        VirtualKeyCode::Up => Key::ArrowUp,
 
-        VirtualKeyCode::Escape => egui::Key::Escape,
-        VirtualKeyCode::Tab => egui::Key::Tab,
-        VirtualKeyCode::Back => egui::Key::Backspace,
-        VirtualKeyCode::Return => egui::Key::Enter,
-        VirtualKeyCode::Space => egui::Key::Space,
+        VirtualKeyCode::Escape => Key::Escape,
+        VirtualKeyCode::Tab => Key::Tab,
+        VirtualKeyCode::Back => Key::Backspace,
+        VirtualKeyCode::Return => Key::Enter,
+        VirtualKeyCode::Space => Key::Space,
 
-        VirtualKeyCode::Insert => egui::Key::Insert,
-        VirtualKeyCode::Delete => egui::Key::Delete,
-        VirtualKeyCode::Home => egui::Key::Home,
-        VirtualKeyCode::End => egui::Key::End,
-        VirtualKeyCode::PageUp => egui::Key::PageUp,
-        VirtualKeyCode::PageDown => egui::Key::PageDown,
+        VirtualKeyCode::Insert => Key::Insert,
+        VirtualKeyCode::Delete => Key::Delete,
+        VirtualKeyCode::Home => Key::Home,
+        VirtualKeyCode::End => Key::End,
+        VirtualKeyCode::PageUp => Key::PageUp,
+        VirtualKeyCode::PageDown => Key::PageDown,
 
         // The virtual keycode for the Minus key.
-        VirtualKeyCode::Minus | VirtualKeyCode::NumpadSubtract => egui::Key::Minus,
+        VirtualKeyCode::Minus | VirtualKeyCode::NumpadSubtract => Key::Minus,
         // The virtual keycode for the Plus/Equals key.
-        VirtualKeyCode::Equals | VirtualKeyCode::NumpadAdd => egui::Key::PlusEquals,
+        VirtualKeyCode::Equals | VirtualKeyCode::NumpadAdd => Key::PlusEquals,
 
         // Either from the main row or from the numpad.
-        VirtualKeyCode::Key0 | VirtualKeyCode::Numpad0 => egui::Key::Num0,
-        VirtualKeyCode::Key1 | VirtualKeyCode::Numpad1 => egui::Key::Num1,
-        VirtualKeyCode::Key2 | VirtualKeyCode::Numpad2 => egui::Key::Num2,
-        VirtualKeyCode::Key3 | VirtualKeyCode::Numpad3 => egui::Key::Num3,
-        VirtualKeyCode::Key4 | VirtualKeyCode::Numpad4 => egui::Key::Num4,
-        VirtualKeyCode::Key5 | VirtualKeyCode::Numpad5 => egui::Key::Num5,
-        VirtualKeyCode::Key6 | VirtualKeyCode::Numpad6 => egui::Key::Num6,
-        VirtualKeyCode::Key7 | VirtualKeyCode::Numpad7 => egui::Key::Num7,
-        VirtualKeyCode::Key8 | VirtualKeyCode::Numpad8 => egui::Key::Num8,
-        VirtualKeyCode::Key9 | VirtualKeyCode::Numpad9 => egui::Key::Num9,
+        VirtualKeyCode::Key0 | VirtualKeyCode::Numpad0 => Key::Num0,
+        VirtualKeyCode::Key1 | VirtualKeyCode::Numpad1 => Key::Num1,
+        VirtualKeyCode::Key2 | VirtualKeyCode::Numpad2 => Key::Num2,
+        VirtualKeyCode::Key3 | VirtualKeyCode::Numpad3 => Key::Num3,
+        VirtualKeyCode::Key4 | VirtualKeyCode::Numpad4 => Key::Num4,
+        VirtualKeyCode::Key5 | VirtualKeyCode::Numpad5 => Key::Num5,
+        VirtualKeyCode::Key6 | VirtualKeyCode::Numpad6 => Key::Num6,
+        VirtualKeyCode::Key7 | VirtualKeyCode::Numpad7 => Key::Num7,
+        VirtualKeyCode::Key8 | VirtualKeyCode::Numpad8 => Key::Num8,
+        VirtualKeyCode::Key9 | VirtualKeyCode::Numpad9 => Key::Num9,
 
-        VirtualKeyCode::A => egui::Key::A,
-        VirtualKeyCode::B => egui::Key::B,
-        VirtualKeyCode::C => egui::Key::C,
-        VirtualKeyCode::D => egui::Key::D,
-        VirtualKeyCode::E => egui::Key::E,
-        VirtualKeyCode::F => egui::Key::F,
-        VirtualKeyCode::G => egui::Key::G,
-        VirtualKeyCode::H => egui::Key::H,
-        VirtualKeyCode::I => egui::Key::I,
-        VirtualKeyCode::J => egui::Key::J,
-        VirtualKeyCode::K => egui::Key::K,
-        VirtualKeyCode::L => egui::Key::L,
-        VirtualKeyCode::M => egui::Key::M,
-        VirtualKeyCode::N => egui::Key::N,
-        VirtualKeyCode::O => egui::Key::O,
-        VirtualKeyCode::P => egui::Key::P,
-        VirtualKeyCode::Q => egui::Key::Q,
-        VirtualKeyCode::R => egui::Key::R,
-        VirtualKeyCode::S => egui::Key::S,
-        VirtualKeyCode::T => egui::Key::T,
-        VirtualKeyCode::U => egui::Key::U,
-        VirtualKeyCode::V => egui::Key::V,
-        VirtualKeyCode::W => egui::Key::W,
-        VirtualKeyCode::X => egui::Key::X,
-        VirtualKeyCode::Y => egui::Key::Y,
-        VirtualKeyCode::Z => egui::Key::Z,
+        VirtualKeyCode::A => Key::A,
+        VirtualKeyCode::B => Key::B,
+        VirtualKeyCode::C => Key::C,
+        VirtualKeyCode::D => Key::D,
+        VirtualKeyCode::E => Key::E,
+        VirtualKeyCode::F => Key::F,
+        VirtualKeyCode::G => Key::G,
+        VirtualKeyCode::H => Key::H,
+        VirtualKeyCode::I => Key::I,
+        VirtualKeyCode::J => Key::J,
+        VirtualKeyCode::K => Key::K,
+        VirtualKeyCode::L => Key::L,
+        VirtualKeyCode::M => Key::M,
+        VirtualKeyCode::N => Key::N,
+        VirtualKeyCode::O => Key::O,
+        VirtualKeyCode::P => Key::P,
+        VirtualKeyCode::Q => Key::Q,
+        VirtualKeyCode::R => Key::R,
+        VirtualKeyCode::S => Key::S,
+        VirtualKeyCode::T => Key::T,
+        VirtualKeyCode::U => Key::U,
+        VirtualKeyCode::V => Key::V,
+        VirtualKeyCode::W => Key::W,
+        VirtualKeyCode::X => Key::X,
+        VirtualKeyCode::Y => Key::Y,
+        VirtualKeyCode::Z => Key::Z,
 
-        VirtualKeyCode::F1 => egui::Key::F1,
-        VirtualKeyCode::F2 => egui::Key::F2,
-        VirtualKeyCode::F3 => egui::Key::F3,
-        VirtualKeyCode::F4 => egui::Key::F4,
-        VirtualKeyCode::F5 => egui::Key::F5,
-        VirtualKeyCode::F6 => egui::Key::F6,
-        VirtualKeyCode::F7 => egui::Key::F7,
-        VirtualKeyCode::F8 => egui::Key::F8,
-        VirtualKeyCode::F9 => egui::Key::F9,
-        VirtualKeyCode::F10 => egui::Key::F10,
-        VirtualKeyCode::F11 => egui::Key::F11,
-        VirtualKeyCode::F12 => egui::Key::F12,
-        VirtualKeyCode::F13 => egui::Key::F13,
-        VirtualKeyCode::F14 => egui::Key::F14,
-        VirtualKeyCode::F15 => egui::Key::F15,
-        VirtualKeyCode::F16 => egui::Key::F16,
-        VirtualKeyCode::F17 => egui::Key::F17,
-        VirtualKeyCode::F18 => egui::Key::F18,
-        VirtualKeyCode::F19 => egui::Key::F19,
-        VirtualKeyCode::F20 => egui::Key::F20,
+        VirtualKeyCode::F1 => Key::F1,
+        VirtualKeyCode::F2 => Key::F2,
+        VirtualKeyCode::F3 => Key::F3,
+        VirtualKeyCode::F4 => Key::F4,
+        VirtualKeyCode::F5 => Key::F5,
+        VirtualKeyCode::F6 => Key::F6,
+        VirtualKeyCode::F7 => Key::F7,
+        VirtualKeyCode::F8 => Key::F8,
+        VirtualKeyCode::F9 => Key::F9,
+        VirtualKeyCode::F10 => Key::F10,
+        VirtualKeyCode::F11 => Key::F11,
+        VirtualKeyCode::F12 => Key::F12,
+        VirtualKeyCode::F13 => Key::F13,
+        VirtualKeyCode::F14 => Key::F14,
+        VirtualKeyCode::F15 => Key::F15,
+        VirtualKeyCode::F16 => Key::F16,
+        VirtualKeyCode::F17 => Key::F17,
+        VirtualKeyCode::F18 => Key::F18,
+        VirtualKeyCode::F19 => Key::F19,
+        VirtualKeyCode::F20 => Key::F20,
 
         _ => return None,
     })
 }
 
-fn winit_to_egui_modifiers(modifiers: ModifiersState) -> egui::Modifiers {
-    egui::Modifiers {
+fn winit_to_egui_modifiers(modifiers: ModifiersState) -> Modifiers {
+    Modifiers {
         alt: modifiers.alt(),
         ctrl: modifiers.ctrl(),
         shift: modifiers.shift(),
         mac_cmd: false,
         command: modifiers.ctrl(),
+    }
+}
+
+fn egui_to_winit_cursor_icon(icon: CursorIcon) -> Option<winit::window::CursorIcon> {
+    match icon {
+        CursorIcon::None => None,
+
+        CursorIcon::Default => Some(winit::window::CursorIcon::Default),
+        CursorIcon::ContextMenu => Some(winit::window::CursorIcon::ContextMenu),
+        CursorIcon::Help => Some(winit::window::CursorIcon::Help),
+        CursorIcon::PointingHand => Some(winit::window::CursorIcon::Hand),
+        CursorIcon::Progress => Some(winit::window::CursorIcon::Progress),
+        CursorIcon::Wait => Some(winit::window::CursorIcon::Wait),
+        CursorIcon::Cell => Some(winit::window::CursorIcon::Cell),
+        CursorIcon::Crosshair => Some(winit::window::CursorIcon::Crosshair),
+        CursorIcon::Text => Some(winit::window::CursorIcon::Text),
+        CursorIcon::VerticalText => Some(winit::window::CursorIcon::VerticalText),
+        CursorIcon::Alias => Some(winit::window::CursorIcon::Alias),
+        CursorIcon::Copy => Some(winit::window::CursorIcon::Copy),
+        CursorIcon::Move => Some(winit::window::CursorIcon::Move),
+        CursorIcon::NoDrop => Some(winit::window::CursorIcon::NoDrop),
+        CursorIcon::NotAllowed => Some(winit::window::CursorIcon::NotAllowed),
+        CursorIcon::Grab => Some(winit::window::CursorIcon::Grab),
+        CursorIcon::Grabbing => Some(winit::window::CursorIcon::Grabbing),
+        CursorIcon::AllScroll => Some(winit::window::CursorIcon::AllScroll),
+        CursorIcon::ResizeHorizontal => Some(winit::window::CursorIcon::EwResize),
+        CursorIcon::ResizeNeSw => Some(winit::window::CursorIcon::NeswResize),
+        CursorIcon::ResizeNwSe => Some(winit::window::CursorIcon::NwseResize),
+        CursorIcon::ResizeVertical => Some(winit::window::CursorIcon::NsResize),
+        CursorIcon::ResizeEast => Some(winit::window::CursorIcon::EResize),
+        CursorIcon::ResizeSouthEast => Some(winit::window::CursorIcon::SeResize),
+        CursorIcon::ResizeSouth => Some(winit::window::CursorIcon::SResize),
+        CursorIcon::ResizeSouthWest => Some(winit::window::CursorIcon::SwResize),
+        CursorIcon::ResizeWest => Some(winit::window::CursorIcon::WResize),
+        CursorIcon::ResizeNorthWest => Some(winit::window::CursorIcon::NwResize),
+        CursorIcon::ResizeNorth => Some(winit::window::CursorIcon::NResize),
+        CursorIcon::ResizeNorthEast => Some(winit::window::CursorIcon::NeResize),
+        CursorIcon::ResizeColumn => Some(winit::window::CursorIcon::ColResize),
+        CursorIcon::ResizeRow => Some(winit::window::CursorIcon::RowResize),
+        CursorIcon::ZoomIn => Some(winit::window::CursorIcon::ZoomIn),
+        CursorIcon::ZoomOut => Some(winit::window::CursorIcon::ZoomOut),
     }
 }

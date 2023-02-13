@@ -44,9 +44,8 @@ impl App {
 
             Event::RedrawRequested(_) => {
                 let time = start_time.elapsed().as_secs_f64();
-                let window_size = window.inner_size();
 
-                let ui_render_data = ui_context.run(window_size, time, |ctx| editor.run(ctx));
+                let ui_render_data = ui_context.run(&window, time, |ctx| editor.run(ctx));
 
                 renderer.render(&ui_render_data);
             }
