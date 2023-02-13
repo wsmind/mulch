@@ -1,9 +1,11 @@
 mod shaders;
 mod ui;
+mod view;
 
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
+use wgpu::TextureView;
 
-use crate::render::ui::UiRenderer;
+use crate::render::{ui::UiRenderer, view::ViewRenderer};
 use crate::ui::UiRenderData;
 
 pub struct Renderer {
@@ -15,6 +17,7 @@ pub struct Renderer {
     recreate_targets: bool,
     depth_target_view: Option<wgpu::TextureView>,
 
+    view_renderer: ViewRenderer,
     ui_renderer: UiRenderer,
 }
 
@@ -72,6 +75,7 @@ impl Renderer {
 
         let modules = shaders::load(&device);
 
+        let view_renderer = ViewRenderer::new(&device, &modules, surface_format);
         let ui_renderer = UiRenderer::new(&device, &modules, surface_format);
 
         Self {
@@ -83,6 +87,7 @@ impl Renderer {
             recreate_targets: true,
             depth_target_view: None,
 
+            view_renderer,
             ui_renderer,
         }
     }
@@ -126,7 +131,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, ui_render_data: &UiRenderData) {
+    pub fn render(&mut self, viewport: &Viewport, ui_render_data: &UiRenderData) {
         self.refresh_targets();
 
         let current_texture = self.surface.get_current_texture();
@@ -143,6 +148,38 @@ impl Renderer {
 
         let depth_target_view = self.depth_target_view.as_ref().unwrap();
 
+        let ui_viewport = ui::UiViewport {
+            size_in_pixels: [self.surface_config.width, self.surface_config.height],
+            pixels_per_point: ui_render_data.pixels_per_point,
+        };
+
+        self.clear_targets(color_target_view, depth_target_view);
+
+        if viewport.rect.is_positive() {
+            let view_rect = ui::ScissorRect::from_egui_rect(viewport.rect, &ui_viewport);
+            self.view_renderer.render(
+                &self.device,
+                &self.queue,
+                color_target_view,
+                depth_target_view,
+                &view_rect,
+                viewport,
+            );
+        }
+
+        self.ui_renderer.render(
+            &self.device,
+            &self.queue,
+            color_target_view,
+            &ui_render_data.textures_delta,
+            &ui_render_data.clipped_primitives,
+            ui_viewport,
+        );
+
+        color_target.present();
+    }
+
+    fn clear_targets(&self, color_target_view: &TextureView, depth_target_view: &TextureView) {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -175,25 +212,19 @@ impl Renderer {
                 }),
             });
         }
+    }
+}
 
-        let ui_viewport = ui::UiViewport {
-            size_in_pixels: [self.surface_config.width, self.surface_config.height],
-            pixels_per_point: ui_render_data.pixels_per_point,
-        };
+pub struct Viewport {
+    pub rect: egui::Rect, // in points
+    pub option: bool,     // just a test
+}
 
-        self.ui_renderer.render(
-            &self.device,
-            &self.queue,
-            &mut encoder,
-            color_target_view,
-            &ui_render_data.textures_delta,
-            &ui_render_data.clipped_primitives,
-            ui_viewport,
-        );
-
-        let command_buffer = encoder.finish();
-        self.queue.submit(std::iter::once(command_buffer));
-
-        color_target.present();
+impl Default for Viewport {
+    fn default() -> Self {
+        Self {
+            rect: egui::Rect::NOTHING,
+            option: true,
+        }
     }
 }

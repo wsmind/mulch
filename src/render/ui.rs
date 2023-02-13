@@ -11,15 +11,15 @@ pub struct UiViewport {
 }
 
 #[derive(Debug)]
-struct ScissorRect {
-    x: u32,
-    y: u32,
-    width: u32,
-    height: u32,
+pub struct ScissorRect {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl ScissorRect {
-    fn from_egui_rect(rect: egui::Rect, viewport: &UiViewport) -> Self {
+    pub fn from_egui_rect(rect: egui::Rect, viewport: &UiViewport) -> Self {
         assert!(rect.min.x < rect.max.x);
         assert!(rect.min.y < rect.max.y);
 
@@ -244,7 +244,6 @@ impl UiRenderer {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        encoder: &mut wgpu::CommandEncoder,
         color_target: &wgpu::TextureView,
         textures_delta: &egui::TexturesDelta,
         clipped_primitives: &Vec<egui::ClippedPrimitive>,
@@ -404,6 +403,9 @@ impl UiRenderer {
         queue.write_buffer(&self.index_buffer, 0, &self.index_data);
         queue.write_buffer(&self.vertex_buffer, 0, &self.vertex_data);
 
+        let mut encoder =
+            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Ui") });
+
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Ui"),
@@ -437,6 +439,9 @@ impl UiRenderer {
                 );
             }
         }
+
+        let command_buffer = encoder.finish();
+        queue.submit(std::iter::once(command_buffer));
 
         for texture_id in &textures_delta.free {
             self.textures.remove(texture_id);
