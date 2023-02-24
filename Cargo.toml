@@ -5,6 +5,12 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+#egui = { git = "https://github.com/wsmind/egui", branch = "better_input", features = [ "bytemuck", "serde" ] }
+#egui_demo_lib = { git = "https://github.com/wsmind/egui", branch = "better_input" }
+
+#egui = { path = "../egui/crates/egui", features = [ "bytemuck", "serde" ] }
+#egui_demo_lib = { path = "../egui/crates/egui_demo_lib" }
+
 [dependencies]
 bytemuck = "1.13.0"
 clipboard-win = "4.5.0"

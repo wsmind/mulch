@@ -24,6 +24,25 @@ impl UiContext {
         let initial_pixels_per_point = 1.10; // default to 10% zoom
         ctx.set_pixels_per_point(initial_pixels_per_point);
 
+        let mut fonts = FontDefinitions::default();
+
+        fonts.font_data.insert(
+            "text_font".to_owned(),
+            FontData::from_static(include_bytes!("../fonts/NotoSans-Light.ttf")),
+        );
+
+        fonts.font_data.insert(
+            "icon_font".to_owned(),
+            FontData::from_static(include_bytes!("../fonts/Font Awesome 6 Free-Solid-900.otf")),
+        );
+
+        let families = fonts.families.get_mut(&FontFamily::Proportional).unwrap();
+
+        families.insert(0, "text_font".to_owned());
+        families.insert(1, "icon_font".to_owned());
+
+        ctx.set_fonts(fonts);
+
         Self {
             ctx,
             events: vec![],

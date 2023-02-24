@@ -1,4 +1,4 @@
-use crate::render;
+use crate::document;
 use crate::render::shaders;
 use crate::render::ui;
 
@@ -69,9 +69,9 @@ impl ViewRenderer {
         color_target_view: &wgpu::TextureView,
         depth_target_view: &wgpu::TextureView,
         view_rect: &ui::ScissorRect,
-        viewport: &render::Viewport,
+        doc: &document::Document,
     ) {
-        if !viewport.option {
+        if !doc.viewport.option {
             return;
         }
 

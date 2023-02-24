@@ -4,6 +4,7 @@ use winit::{
     window::WindowBuilder,
 };
 
+use crate::document;
 use crate::editor;
 use crate::render;
 use crate::ui;
@@ -25,7 +26,7 @@ impl App {
 
         let window_size = window.inner_size();
         let mut renderer = render::Renderer::new(&window, [window_size.width, window_size.height]);
-        let mut viewport = render::Viewport::default();
+        let mut doc = document::Document::default();
 
         let mut ui_context = ui::UiContext::new();
         let mut editor = editor::Editor::new();
@@ -46,10 +47,9 @@ impl App {
             Event::RedrawRequested(_) => {
                 let time = start_time.elapsed().as_secs_f64();
 
-                let ui_render_data =
-                    ui_context.run(&window, time, |ctx| editor.run(ctx, &mut viewport));
+                let ui_render_data = ui_context.run(&window, time, |ctx| editor.run(ctx, &mut doc));
 
-                renderer.render(&viewport, &ui_render_data);
+                renderer.render(&doc, &ui_render_data);
             }
 
             Event::MainEventsCleared => {

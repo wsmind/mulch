@@ -5,6 +5,7 @@ mod view;
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use wgpu::TextureView;
 
+use crate::document;
 use crate::render::{ui::UiRenderer, view::ViewRenderer};
 use crate::ui::UiRenderData;
 
@@ -131,7 +132,7 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, viewport: &Viewport, ui_render_data: &UiRenderData) {
+    pub fn render(&mut self, doc: &document::Document, ui_render_data: &UiRenderData) {
         self.refresh_targets();
 
         let current_texture = self.surface.get_current_texture();
@@ -155,15 +156,15 @@ impl Renderer {
 
         self.clear_targets(color_target_view, depth_target_view);
 
-        if viewport.rect.is_positive() {
-            let view_rect = ui::ScissorRect::from_egui_rect(viewport.rect, &ui_viewport);
+        if doc.viewport.rect.is_positive() {
+            let view_rect = ui::ScissorRect::from_egui_rect(doc.viewport.rect, &ui_viewport);
             self.view_renderer.render(
                 &self.device,
                 &self.queue,
                 color_target_view,
                 depth_target_view,
                 &view_rect,
-                viewport,
+                doc,
             );
         }
 
@@ -211,20 +212,6 @@ impl Renderer {
                     stencil_ops: None,
                 }),
             });
-        }
-    }
-}
-
-pub struct Viewport {
-    pub rect: egui::Rect, // in points
-    pub option: bool,     // just a test
-}
-
-impl Default for Viewport {
-    fn default() -> Self {
-        Self {
-            rect: egui::Rect::NOTHING,
-            option: true,
         }
     }
 }
