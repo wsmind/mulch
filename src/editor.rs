@@ -1,58 +1,52 @@
+mod panels;
+mod state;
+mod tools;
+mod widgets;
+
 use egui::*;
 
 use crate::document;
 
-mod tools;
+use self::panels::*;
+use self::state::EditorState;
 
 pub struct Editor {
+    state: EditorState,
+    toolbar: Toolbar,
     egui_demo: egui_demo_lib::DemoWindows,
     selected_layer: usize,
     layer_rename: bool,
     layer_name: String,
-
-    tools: Vec<Box<dyn tools::Tool>>,
-    selected_tool: usize,
 }
 
 impl Editor {
     pub fn new() -> Self {
         let egui_demo = egui_demo_lib::DemoWindows::default();
 
-        let tools: Vec<Box<dyn tools::Tool>> =
-            vec![Box::new(tools::PaintBrush {}), Box::new(tools::Eraser {})];
+        let state = EditorState::default();
+
+        let toolbar = Toolbar::new();
 
         Self {
+            state,
+            toolbar,
+
             egui_demo,
             selected_layer: 0,
             layer_rename: false,
             layer_name: String::new(),
-            tools,
-            selected_tool: 0,
         }
     }
 
     pub fn run(&mut self, ctx: &Context, doc: &mut document::Document) {
         //self.egui_demo.ui(ctx);
 
-        SidePanel::left("toolbar")
-            .exact_width(32.0)
-            .resizable(false)
-            .show(ctx, |ui| {
-                let style = ui.style_mut();
-                style.text_styles.get_mut(&TextStyle::Button).unwrap().size = 20.0;
-                style.spacing.item_spacing = Vec2::new(8.0, 8.0);
-                for (i, tool) in self.tools.iter().enumerate() {
-                    let selected = self.selected_tool == i;
-                    if ui.selectable_label(selected, tool.icon()).clicked() {
-                        self.selected_tool = i;
-                    }
-                }
-            });
+        self.toolbar.show(ctx, &mut self.state);
 
         SidePanel::right("side_panel")
             .default_width(200.0)
             .show(ctx, |ui| {
-                ctx.style_ui(ui);
+                //ctx.style_ui(ui);
                 ui.strong("\u{f5fd} Layers");
                 ScrollArea::vertical()
                     .auto_shrink([false, true])

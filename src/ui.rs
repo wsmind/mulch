@@ -24,7 +24,7 @@ impl UiContext {
         let initial_pixels_per_point = 1.10; // default to 10% zoom
         ctx.set_pixels_per_point(initial_pixels_per_point);
 
-        let mut fonts = FontDefinitions::default();
+        let mut fonts = FontDefinitions::empty();
 
         fonts.font_data.insert(
             "text_font".to_owned(),
@@ -33,7 +33,12 @@ impl UiContext {
 
         fonts.font_data.insert(
             "icon_font".to_owned(),
-            FontData::from_static(include_bytes!("../fonts/Font Awesome 6 Free-Solid-900.otf")),
+            FontData::from_static(include_bytes!("../fonts/Font Awesome 6 Free-Solid-900.otf"))
+                .tweak(FontTweak {
+                    scale: 1.0,
+                    y_offset_factor: 0.1, // move it down
+                    y_offset: 0.0,
+                }),
         );
 
         let families = fonts.families.get_mut(&FontFamily::Proportional).unwrap();
@@ -42,6 +47,19 @@ impl UiContext {
         families.insert(1, "icon_font".to_owned());
 
         ctx.set_fonts(fonts);
+
+        let mut style = (*ctx.style()).clone();
+        style.spacing.window_margin = Margin::same(8.0);
+        style.visuals.window_shadow = epaint::Shadow {
+            extrusion: 3.0,
+            color: Color32::from_black_alpha(96),
+        };
+        style.visuals.popup_shadow = epaint::Shadow {
+            extrusion: 3.0,
+            color: Color32::from_black_alpha(96),
+        };
+        style.visuals.widgets.noninteractive.fg_stroke.color = Color32::from_rgb(160, 160, 160);
+        ctx.set_style(style);
 
         Self {
             ctx,
