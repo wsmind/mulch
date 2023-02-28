@@ -1,6 +1,6 @@
 use egui::*;
 
-use super::{state::EditorState, widgets::ToolbarButton};
+use super::state::EditorState;
 
 pub struct Toolbar {}
 
@@ -27,8 +27,14 @@ impl Toolbar {
                     ctx.format_shortcut(&tool.shortcut())
                 );
 
-                let button = ToolbarButton::new(selected, tool.icon());
-                if ui.add(button).on_hover_text(tooltip).clicked() {
+                let response = ui
+                    .add_sized(
+                        vec2(32.0, 32.0),
+                        SelectableLabel::new(selected, tool.icon()),
+                    )
+                    .on_hover_text(tooltip);
+
+                if response.clicked() {
                     state.selected_tool = i;
                 }
 
@@ -36,18 +42,8 @@ impl Toolbar {
                     if input.consume_shortcut(&tool.shortcut()) {
                         state.selected_tool = i;
                     }
-                })
-
-                // if ui.selectable_label(selected, tool.icon()).clicked() {
-                //     state.selected_tool = i;
-                // }
+                });
             }
         });
-
-        // SidePanel::left("toolbar")
-        //     //.exact_width(32.0)
-        //     .width_range(0.0..=200.0)
-        //     .resizable(true)
-        //     .show(ctx, |ui| {});
     }
 }

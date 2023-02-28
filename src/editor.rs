@@ -1,7 +1,6 @@
 mod panels;
 mod state;
 mod tools;
-mod widgets;
 
 use egui::*;
 
@@ -135,12 +134,24 @@ impl Editor {
                 ui.separator();
             });
 
-        CentralPanel::default()
+        let response = CentralPanel::default()
             .frame(Frame::none())
             .show(&ctx, |ui| {
                 doc.viewport.rect = ui.max_rect();
-                ui.label("viewport");
-                ui.checkbox(&mut doc.viewport.option, "enabled");
+
+                let response =
+                    ui.allocate_response(doc.viewport.rect.size(), Sense::click_and_drag());
+
+                let mut child_ui = ui.child_ui(response.rect, *ui.layout());
+
+                child_ui.label("viewport");
+                child_ui.checkbox(&mut doc.viewport.option, "enabled");
+
+                response
             });
+
+        if response.inner.hovered() {
+            //println!("{:?} viewport hovered!", std::time::SystemTime::now());
+        }
     }
 }
