@@ -147,10 +147,10 @@ impl Editor {
                 let response =
                     ui.allocate_response(doc.viewport.rect.size(), Sense::click_and_drag());
 
-                let mut child_ui = ui.child_ui(response.rect, *ui.layout());
+                // let mut child_ui = ui.child_ui(response.rect, *ui.layout());
 
-                child_ui.label("viewport");
-                child_ui.checkbox(&mut doc.viewport.grid_enabled, "grid enabled");
+                // child_ui.label("viewport");
+                // child_ui.checkbox(&mut doc.viewport.grid_enabled, "grid enabled");
 
                 response
             });
@@ -176,61 +176,67 @@ impl Editor {
             })
         }
 
-        let camera_window = Window::new("Camera");
-        camera_window.show(ctx, |ui| {
-            ui.strong("Transform");
-            egui::Grid::new("transform_grid")
-                .num_columns(2)
-                .spacing([8.0, 8.0])
-                .show(ui, |ui| {
-                    ui.label("Position");
-                    ui.add(DragValue::new(&mut camera.position.x).speed(0.1));
-                    ui.add(DragValue::new(&mut camera.position.y).speed(0.1));
-                    ui.add(DragValue::new(&mut camera.position.z).speed(0.1));
-                    ui.end_row();
+        Window::new("Viewport")
+            .anchor(Align2::RIGHT_TOP, vec2(-8.0, 8.0))
+            .default_width(200.0)
+            .vscroll(true)
+            .show(ctx, |ui| {
+                ui.strong("Camera");
+                egui::Grid::new("transform_grid")
+                    .num_columns(2)
+                    .spacing([8.0, 8.0])
+                    .show(ui, |ui| {
+                        ui.label("Position");
+                        ui.add(DragValue::new(&mut camera.position.x).speed(0.1));
+                        ui.add(DragValue::new(&mut camera.position.y).speed(0.1));
+                        ui.add(DragValue::new(&mut camera.position.z).speed(0.1));
+                        ui.end_row();
 
-                    ui.label("Pitch");
-                    ui.drag_angle(&mut camera.pitch);
-                    ui.end_row();
+                        ui.label("Pitch");
+                        ui.drag_angle(&mut camera.pitch);
+                        ui.end_row();
 
-                    ui.label("Yaw");
-                    ui.drag_angle(&mut camera.yaw);
-                    ui.end_row();
-                });
-            ui.separator();
-            ui.strong("Projection");
-            egui::Grid::new("projection_grid")
-                .num_columns(2)
-                .spacing([8.0, 8.0])
-                .show(ui, |ui| {
-                    ui.label("Focal Angle");
+                        ui.label("Yaw");
+                        ui.drag_angle(&mut camera.yaw);
+                        ui.end_row();
+                    });
+                ui.separator();
+                ui.strong("Projection");
+                egui::Grid::new("projection_grid")
+                    .num_columns(2)
+                    .spacing([8.0, 8.0])
+                    .show(ui, |ui| {
+                        ui.label("Focal Angle");
 
-                    let previous_fovy = camera.fovy.to_degrees();
-                    let mut fovy = previous_fovy;
-                    ui.add(
-                        DragValue::new(&mut fovy)
-                            .speed(1.0)
-                            .suffix("°")
-                            .clamp_range(1.0..=179.0),
-                    );
-                    if fovy != previous_fovy {
-                        camera.fovy = fovy.to_radians()
-                    }
-                    ui.end_row();
+                        let previous_fovy = camera.fovy.to_degrees();
+                        let mut fovy = previous_fovy;
+                        ui.add(
+                            DragValue::new(&mut fovy)
+                                .speed(1.0)
+                                .suffix("°")
+                                .clamp_range(1.0..=179.0),
+                        );
+                        if fovy != previous_fovy {
+                            camera.fovy = fovy.to_radians()
+                        }
+                        ui.end_row();
 
-                    ui.label("Clip range");
-                    ui.add(
-                        DragValue::new(&mut camera.near)
-                            .speed(0.1)
-                            .clamp_range(0.01..=camera.far - 0.01),
-                    );
-                    ui.add(
-                        DragValue::new(&mut camera.far)
-                            .speed(0.1)
-                            .clamp_range(camera.near + 0.01..=1000000.0),
-                    );
-                    ui.end_row();
-                });
-        });
+                        ui.label("Clip range");
+                        ui.add(
+                            DragValue::new(&mut camera.near)
+                                .speed(0.1)
+                                .clamp_range(0.01..=camera.far - 0.01),
+                        );
+                        ui.add(
+                            DragValue::new(&mut camera.far)
+                                .speed(0.1)
+                                .clamp_range(camera.near + 0.01..=1000000.0),
+                        );
+                        ui.end_row();
+                    });
+                ui.separator();
+                ui.strong("Display");
+                ui.checkbox(&mut doc.viewport.grid_enabled, "Grid");
+            });
     }
 }

@@ -63,9 +63,9 @@ pub struct Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            position: (0.0, -4.0, 4.0).into(),
-            pitch: -1.0,
-            yaw: 0.0,
+            position: (-2.0, -3.0, 1.6).into(),
+            pitch: -0.5,
+            yaw: -0.6,
 
             fovy: 1.2,
             near: 0.01,
