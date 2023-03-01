@@ -76,9 +76,9 @@ impl Default for Camera {
 
 impl Camera {
     pub fn translate_local_frame(&mut self, offset: glam::Vec3) {
-        self.position += glam::Mat3::from_rotation_z(-self.yaw)
-            * glam::Mat3::from_rotation_x(-self.pitch)
-            * offset;
+        let (view, _) = self.compute_matrices(1.0);
+
+        self.position += glam::Mat3::from_mat4(view).transpose() * offset;
     }
 
     pub fn compute_matrices(&self, aspect_ratio: f32) -> (glam::Mat4, glam::Mat4) {

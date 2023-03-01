@@ -155,11 +155,27 @@ impl Editor {
                 response
             });
 
+        let camera = &mut doc.viewport.camera;
+
         if response.inner.hovered() {
-            //println!("{:?} viewport hovered!", std::time::SystemTime::now());
+            ctx.input(|input| {
+                let pointer_delta = input.pointer.delta() * ctx.pixels_per_point() * 0.02;
+                let scroll_delta = input.scroll_delta.y * ctx.pixels_per_point() * 0.02;
+
+                if input.pointer.middle_down() {
+                    camera.translate_local_frame(glam::vec3(
+                        -pointer_delta.x,
+                        pointer_delta.y,
+                        0.0,
+                    ));
+                }
+
+                if scroll_delta != 0.0 {
+                    camera.translate_local_frame(glam::vec3(0.0, 0.0, -scroll_delta));
+                }
+            })
         }
 
-        let camera = &mut doc.viewport.camera;
         let camera_window = Window::new("Camera");
         camera_window.show(ctx, |ui| {
             ui.strong("Transform");
