@@ -84,8 +84,14 @@ impl Camera {
     }
 
     pub fn orbit(&mut self, pitch_delta: f32, yaw_delta: f32, distance: f32) {
-        self.pitch += pitch_delta;
         self.yaw += yaw_delta;
+
+        // clamp pitch to avoid camera inversion
+        let max_angle = 89.0_f32.to_radians();
+        let new_pitch = (self.pitch + pitch_delta).clamp(-max_angle, max_angle);
+
+        let pitch_delta = new_pitch - self.pitch;
+        self.pitch = new_pitch;
 
         let (view, _) = self.compute_matrices(1.0);
         let center = (view.inverse() * glam::vec4(0.0, 0.0, -distance, 1.0)).xyz();

@@ -219,7 +219,17 @@ impl Editor {
                         ui.end_row();
 
                         ui.label("Pitch");
-                        ui.drag_angle(&mut camera.pitch);
+                        let previous_pitch = camera.pitch.to_degrees();
+                        let mut pitch = previous_pitch;
+                        ui.add(
+                            DragValue::new(&mut pitch)
+                                .speed(1.0)
+                                .suffix("°")
+                                .clamp_range(-89..=89),
+                        );
+                        if pitch != previous_pitch {
+                            camera.pitch = pitch.to_radians()
+                        }
                         ui.end_row();
 
                         ui.label("Yaw");
