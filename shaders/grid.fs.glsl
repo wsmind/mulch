@@ -16,5 +16,7 @@ void main()
 
     alpha = clamp(alpha, 0.0, 1.0);
 
-    output_color = vec4(0.1 + red * 0.2, 0.1 + green * 0.2, 0.1, alpha);
+    float intensity = 0.12;
+    float color_intensity = 0.1;
+    output_color = vec4(intensity + red * color_intensity, intensity + green * color_intensity, intensity, alpha);
 }

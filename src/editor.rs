@@ -47,6 +47,16 @@ impl Editor {
 
         self.state.keyboard_modifiers = keyboard_modifiers;
 
+        TopBottomPanel::top("menu_bar").show(ctx, |ui| {
+            menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Exit").clicked() {
+                        std::process::exit(0);
+                    }
+                });
+            });
+        });
+
         self.toolbar.show(ctx, &mut self.state);
 
         SidePanel::right("side_panel")
@@ -173,13 +183,13 @@ impl Editor {
                     if keyboard_modifiers.shift() {
                         // pan
                         camera.translate_local_frame(glam::vec3(
-                            -pointer_delta.x,
-                            pointer_delta.y,
+                            -pointer_delta.x * 0.5,
+                            pointer_delta.y * 0.5,
                             0.0,
                         ));
                     } else {
                         // orbit
-                        camera.orbit(-pointer_delta.y, -pointer_delta.x, 8.0);
+                        camera.orbit(-pointer_delta.y * 0.2, -pointer_delta.x * 0.2, 8.0);
                     }
                 }
 
@@ -190,8 +200,9 @@ impl Editor {
             })
         }
 
-        Window::new("Viewport")
-            .anchor(Align2::RIGHT_TOP, vec2(-4.0, 4.0))
+        let window_margin = ctx.style().spacing.window_margin.left;
+        Window::new("Viewport Settings")
+            .anchor(Align2::RIGHT_TOP, vec2(-window_margin, window_margin))
             .default_width(200.0)
             .vscroll(true)
             .default_open(false)

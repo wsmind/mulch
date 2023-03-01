@@ -10,10 +10,12 @@ impl Toolbar {
     }
 
     pub fn show(&mut self, ctx: &Context, state: &mut EditorState) {
+        let window_margin = ctx.style().spacing.window_margin.left;
+
         let window = Window::new("Toolbar")
             .title_bar(false)
             .resizable(false)
-            .anchor(Align2::LEFT_TOP, vec2(4.0, 4.0));
+            .anchor(Align2::LEFT_TOP, vec2(window_margin, window_margin));
         window.show(ctx, |ui| {
             let style = ui.style_mut();
             style.text_styles.get_mut(&TextStyle::Button).unwrap().size = 22.0;

@@ -49,7 +49,9 @@ impl UiContext {
         ctx.set_fonts(fonts);
 
         let mut style = (*ctx.style()).clone();
-        style.spacing.window_margin = Margin::same(8.0);
+        style.text_styles.get_mut(&TextStyle::Heading).unwrap().size = 12.5;
+        style.spacing.window_margin = Margin::same(6.0);
+        style.visuals.window_rounding = Rounding::same(3.0);
         style.visuals.window_shadow = epaint::Shadow {
             extrusion: 3.0,
             color: Color32::from_black_alpha(96),
