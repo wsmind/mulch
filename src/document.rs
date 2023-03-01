@@ -69,7 +69,7 @@ impl Default for Camera {
 
             fovy: 1.2,
             near: 0.01,
-            far: 100.0,
+            far: 1000.0,
         }
     }
 }
