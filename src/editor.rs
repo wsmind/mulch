@@ -37,8 +37,15 @@ impl Editor {
         }
     }
 
-    pub fn run(&mut self, ctx: &Context, doc: &mut document::Document) {
+    pub fn run(
+        &mut self,
+        ctx: &Context,
+        doc: &mut document::Document,
+        keyboard_modifiers: winit::event::ModifiersState,
+    ) {
         //self.egui_demo.ui(ctx);
+
+        self.state.keyboard_modifiers = keyboard_modifiers;
 
         self.toolbar.show(ctx, &mut self.state);
 
@@ -163,23 +170,31 @@ impl Editor {
                 let scroll_delta = input.scroll_delta.y * ctx.pixels_per_point() * 0.02;
 
                 if input.pointer.middle_down() {
-                    camera.translate_local_frame(glam::vec3(
-                        -pointer_delta.x,
-                        pointer_delta.y,
-                        0.0,
-                    ));
+                    if keyboard_modifiers.shift() {
+                        // pan
+                        camera.translate_local_frame(glam::vec3(
+                            -pointer_delta.x,
+                            pointer_delta.y,
+                            0.0,
+                        ));
+                    } else {
+                        // orbit
+                        camera.orbit(-pointer_delta.y, -pointer_delta.x, 8.0);
+                    }
                 }
 
                 if scroll_delta != 0.0 {
+                    // zoom
                     camera.translate_local_frame(glam::vec3(0.0, 0.0, -scroll_delta));
                 }
             })
         }
 
         Window::new("Viewport")
-            .anchor(Align2::RIGHT_TOP, vec2(-8.0, 8.0))
+            .anchor(Align2::RIGHT_TOP, vec2(-4.0, 4.0))
             .default_width(200.0)
             .vscroll(true)
+            .default_open(false)
             .show(ctx, |ui| {
                 ui.strong("Camera");
                 egui::Grid::new("transform_grid")

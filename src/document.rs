@@ -1,3 +1,5 @@
+use glam::Vec4Swizzles;
+
 pub struct Document {
     pub layers: Vec<Layer>,
     pub viewport: Viewport,
@@ -79,6 +81,21 @@ impl Camera {
         let (view, _) = self.compute_matrices(1.0);
 
         self.position += glam::Mat3::from_mat4(view).transpose() * offset;
+    }
+
+    pub fn orbit(&mut self, pitch_delta: f32, yaw_delta: f32, distance: f32) {
+        self.pitch += pitch_delta;
+        self.yaw += yaw_delta;
+
+        let (view, _) = self.compute_matrices(1.0);
+        let center = (view.inverse() * glam::vec4(0.0, 0.0, -distance, 1.0)).xyz();
+        self.position = center
+            + glam::Mat3::from_rotation_z(yaw_delta)
+                * glam::Mat3::from_axis_angle(
+                    glam::Mat3::from_mat4(view.transpose()).x_axis,
+                    pitch_delta,
+                )
+                * (self.position - center)
     }
 
     pub fn compute_matrices(&self, aspect_ratio: f32) -> (glam::Mat4, glam::Mat4) {

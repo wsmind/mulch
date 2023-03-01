@@ -46,8 +46,11 @@ impl App {
 
             Event::RedrawRequested(_) => {
                 let time = start_time.elapsed().as_secs_f64();
+                let keyboard_modifiers = ui_context.modifiers_state;
 
-                let ui_render_data = ui_context.run(&window, time, |ctx| editor.run(ctx, &mut doc));
+                let ui_render_data = ui_context.run(&window, time, |ctx| {
+                    editor.run(ctx, &mut doc, keyboard_modifiers)
+                });
 
                 renderer.render(&doc, &ui_render_data);
             }

@@ -13,7 +13,7 @@ pub struct UiContext {
     events: Vec<egui::Event>,
     last_mouse_position: Pos2,
     initial_pixels_per_point: f32,
-    modifiers_state: ModifiersState,
+    pub modifiers_state: ModifiersState, // hack to get around egui bugs
     current_cursor_icon: Option<CursorIcon>,
 }
 
@@ -133,7 +133,7 @@ impl UiContext {
                         ElementState::Pressed => true,
                         ElementState::Released => false,
                     },
-                    modifiers: Default::default(),
+                    modifiers: winit_to_egui_modifiers(self.modifiers_state),
                 })
             }
 
