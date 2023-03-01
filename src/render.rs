@@ -1,3 +1,4 @@
+mod grid;
 mod shaders;
 mod ui;
 mod view;
@@ -184,7 +185,7 @@ impl Renderer {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render"),
+                label: Some("Clear"),
             });
 
         {
@@ -213,5 +214,8 @@ impl Renderer {
                 }),
             });
         }
+
+        let command_buffer = encoder.finish();
+        self.queue.submit(std::iter::once(command_buffer));
     }
 }

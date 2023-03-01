@@ -1,9 +1,12 @@
 use crate::document;
+use crate::render::grid;
 use crate::render::shaders;
 use crate::render::ui;
 
 pub struct ViewRenderer {
-    pipeline: wgpu::RenderPipeline,
+    grid_renderer: grid::GridRenderer,
+
+    view_constant_buffer: wgpu::Buffer,
 }
 
 impl ViewRenderer {
@@ -12,54 +15,20 @@ impl ViewRenderer {
         modules: &shaders::ShaderModules,
         surface_format: wgpu::TextureFormat,
     ) -> Self {
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Test Pipeline Layout"),
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
+        let view_constant_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("View Constants"),
+            size: std::mem::size_of::<ViewConstants>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
 
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Test Pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: modules.get("test.vs.glsl").unwrap(),
-                entry_point: "main",
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: modules.get("test.fs.glsl").unwrap(),
-                entry_point: "main",
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: surface_format,
-                    blend: None,
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: None,
-                unclipped_depth: false,
-                polygon_mode: wgpu::PolygonMode::Fill,
-                conservative: false,
-            },
-            depth_stencil: Some(wgpu::DepthStencilState {
-                format: wgpu::TextureFormat::Depth24PlusStencil8,
-                depth_write_enabled: true,
-                depth_compare: wgpu::CompareFunction::LessEqual,
-                stencil: wgpu::StencilState::default(),
-                bias: wgpu::DepthBiasState::default(),
-            }),
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-            multiview: None,
-        });
+        let grid_renderer =
+            grid::GridRenderer::new(device, modules, surface_format, &view_constant_buffer);
 
-        Self { pipeline }
+        Self {
+            grid_renderer,
+            view_constant_buffer,
+        }
     }
 
     pub fn render(
@@ -71,9 +40,18 @@ impl ViewRenderer {
         view_rect: &ui::ScissorRect,
         doc: &document::Document,
     ) {
-        if !doc.viewport.option {
-            return;
-        }
+        let aspect_ratio = view_rect.width as f32 / view_rect.height as f32;
+        let (view_matrix, projection_matrix) = doc.viewport.camera.compute_matrices(aspect_ratio);
+        let view_constants = ViewConstants {
+            view_matrix,
+            projection_matrix,
+        };
+
+        queue.write_buffer(
+            &self.view_constant_buffer,
+            0,
+            bytemuck::cast_slice(&[view_constants]),
+        );
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Viewport"),
@@ -110,11 +88,22 @@ impl ViewRenderer {
             );
             pass.set_scissor_rect(view_rect.x, view_rect.y, view_rect.width, view_rect.height);
 
-            pass.set_pipeline(&self.pipeline);
-            pass.draw(0..3, 0..1);
+            // pass.set_pipeline(&self.pipeline);
+            // pass.draw(0..3, 0..1);
+
+            if doc.viewport.grid_enabled {
+                self.grid_renderer.draw(&mut pass);
+            }
         }
 
         let command_buffer = encoder.finish();
         queue.submit(std::iter::once(command_buffer));
     }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct ViewConstants {
+    view_matrix: glam::Mat4,
+    projection_matrix: glam::Mat4,
 }

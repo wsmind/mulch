@@ -36,14 +36,60 @@ impl Default for Layer {
 
 pub struct Viewport {
     pub rect: egui::Rect, // in points
-    pub option: bool,     // just a test
+    pub grid_enabled: bool,
+    pub camera: Camera,
 }
 
 impl Default for Viewport {
     fn default() -> Self {
         Self {
             rect: egui::Rect::NOTHING,
-            option: true,
+            grid_enabled: true,
+            camera: Camera::default(),
         }
+    }
+}
+
+pub struct Camera {
+    pub position: glam::Vec3,
+    pub pitch: f32,
+    pub yaw: f32,
+
+    pub fovy: f32,
+    pub near: f32,
+    pub far: f32,
+}
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self {
+            position: (0.0, -4.0, 4.0).into(),
+            pitch: -1.0,
+            yaw: 0.0,
+
+            fovy: 1.2,
+            near: 0.01,
+            far: 100.0,
+        }
+    }
+}
+
+impl Camera {
+    pub fn translate_local_frame(&mut self, offset: glam::Vec3) {
+        self.position += glam::Mat3::from_rotation_z(-self.yaw)
+            * glam::Mat3::from_rotation_x(-self.pitch)
+            * offset;
+    }
+
+    pub fn compute_matrices(&self, aspect_ratio: f32) -> (glam::Mat4, glam::Mat4) {
+        let direction = glam::Mat3::from_rotation_z(self.yaw)
+            * glam::Mat3::from_rotation_x(self.pitch)
+            * glam::Vec3::Y;
+
+        let view = glam::Mat4::look_to_rh(self.position, direction, glam::Vec3::Z);
+
+        let projection = glam::Mat4::perspective_rh(self.fovy, aspect_ratio, self.near, self.far);
+
+        (view, projection)
     }
 }
