@@ -18,6 +18,7 @@ egui = { version = "0.21.0", features = [ "bytemuck", "serde" ] }
 egui_demo_lib = "0.21.0"
 futures = "0.3.26"
 glam = { version = "0.23.0", features = [ "bytemuck"] }
+rand = "0.8.5"
 raw-window-handle = "0.5.0"
 wgpu = { version = "0.15.1", features = ["spirv"] }
 winit = "0.28.1"

@@ -200,6 +200,17 @@ impl Editor {
             })
         }
 
+        if response.inner.clicked_by(PointerButton::Primary) {
+            let pos = (
+                rand::random::<usize>() % 50 + 10,
+                rand::random::<usize>() % 50 + 10,
+                rand::random::<usize>() % 20 + 5,
+            );
+            doc.layers[self.selected_layer]
+                .voxel_grid
+                .paint_sphere(pos, 2.3);
+        }
+
         let window_margin = ctx.style().spacing.window_margin.left;
         Window::new("Viewport Settings")
             .anchor(Align2::RIGHT_TOP, vec2(-window_margin, window_margin))
