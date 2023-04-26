@@ -36,6 +36,28 @@ impl VoxelGrid {
         }
     }
 
+    pub fn paint_sphere(&mut self, pos: Coords, radius: f32) {
+        let bounds_radius = radius.ceil() as i32;
+
+        for z in -bounds_radius..=bounds_radius {
+            for y in -bounds_radius..=bounds_radius {
+                for x in -bounds_radius..=bounds_radius {
+                    let point = (x as f32, y as f32, z as f32);
+                    let distance =
+                        (point.0 * point.0 + point.1 * point.1 + point.2 * point.2).sqrt();
+                    if distance <= radius {
+                        let voxel_pos = (
+                            (pos.0 as i32 + x) as usize,
+                            (pos.1 as i32 + y) as usize,
+                            (pos.2 as i32 + z) as usize,
+                        );
+                        self.data[voxel_pos.2 * 64 + voxel_pos.1] |= 1 << voxel_pos.0;
+                    }
+                }
+            }
+        }
+    }
+
     pub fn generate_mesh(&self) -> (Vec<VertexData>, Vec<u32>) {
         let mut vertices: Vec<VertexData> = vec![];
         let mut indices: Vec<u32> = vec![];
