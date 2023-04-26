@@ -3,6 +3,7 @@ use crate::render::grid;
 use crate::render::shaders;
 use crate::render::ui;
 use crate::render::voxel;
+use crate::voxels;
 
 pub struct ViewRenderer {
     grid_renderer: grid::GridRenderer,
@@ -94,10 +95,23 @@ impl ViewRenderer {
             );
             pass.set_scissor_rect(view_rect.x, view_rect.y, view_rect.width, view_rect.height);
 
+            let mut flat_voxel_grid = voxels::VoxelGrid::new();
             for layer in &doc.layers {
-                self.voxel_renderer
-                    .draw(queue, &mut pass, &layer.voxel_grid);
+                if !layer.visible {
+                    continue;
+                }
+
+                match layer.blend_mode {
+                    document::BlendMode::Add => {
+                        flat_voxel_grid.add(&layer.voxel_grid);
+                    }
+                    document::BlendMode::Subtract => {
+                        flat_voxel_grid.subtract(&layer.voxel_grid);
+                    }
+                }
             }
+
+            self.voxel_renderer.draw(queue, &mut pass, &flat_voxel_grid);
 
             if doc.viewport.grid_enabled {
                 self.grid_renderer.draw(&mut pass);

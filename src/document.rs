@@ -29,8 +29,16 @@ impl Default for Document {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum BlendMode {
+    Add,
+    Subtract,
+}
+
 pub struct Layer {
     pub name: String,
+    pub visible: bool,
+    pub blend_mode: BlendMode,
     pub voxel_grid: VoxelGrid,
 }
 
@@ -38,6 +46,8 @@ impl Default for Layer {
     fn default() -> Self {
         Self {
             name: "Layer".to_string(),
+            visible: true,
+            blend_mode: BlendMode::Add,
             voxel_grid: VoxelGrid::new(),
         }
     }

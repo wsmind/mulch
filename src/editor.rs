@@ -107,7 +107,8 @@ impl Editor {
 
                                 // text.paint_with_visuals(ui.painter(), text_pos, &visuals);
                                 //let inner_rect = response.rect.shrink2(vec2(8.0, 8.0));
-                                let mut child_ui = ui.child_ui(response.rect, *ui.layout());
+                                let mut child_ui = ui
+                                    .child_ui(response.rect, Layout::left_to_right(Align::Center));
 
                                 if is_selected && self.layer_rename == true {
                                     let edit = child_ui.add_sized(
@@ -120,12 +121,26 @@ impl Editor {
                                         self.layer_rename = false;
                                     }
                                 } else {
-                                    child_ui.add_sized(
-                                        vec2(response.rect.width(), response.rect.height()),
-                                        Label::new(layer.name.as_str()),
-                                    );
+                                    let visible_icon = if layer.visible {
+                                        "\u{f06e}"
+                                    } else {
+                                        "\u{f070}"
+                                    };
+                                    if child_ui
+                                        .add_sized(
+                                            vec2(24.0, response.rect.height()),
+                                            Label::new(visible_icon),
+                                        )
+                                        .clicked()
+                                    {
+                                        layer.visible = !layer.visible;
+                                    }
+                                    // child_ui.add_sized(
+                                    //     vec2(response.rect.width() - 16.0, response.rect.height()),
+                                    //     Label::new(layer.name.as_str()),
+                                    // );
 
-                                    //child_ui.label(layer.name.as_str());
+                                    child_ui.label(layer.name.as_str());
                                 }
                             }
 
@@ -153,7 +168,28 @@ impl Editor {
                             }
                         }
                     });
+
                 ui.separator();
+
+                let selected_layer = &mut doc.layers[self.selected_layer];
+                ui.strong(selected_layer.name.as_str());
+                ui.checkbox(&mut selected_layer.visible, "Visible");
+                egui::ComboBox::from_label("Blend Mode")
+                    .selected_text(format!("{:?}", selected_layer.blend_mode))
+                    .show_ui(ui, |ui| {
+                        ui.style_mut().wrap = Some(false);
+                        ui.set_min_width(60.0);
+                        ui.selectable_value(
+                            &mut selected_layer.blend_mode,
+                            document::BlendMode::Add,
+                            "Add",
+                        );
+                        ui.selectable_value(
+                            &mut selected_layer.blend_mode,
+                            document::BlendMode::Subtract,
+                            "Subtract",
+                        );
+                    });
             });
 
         let response = CentralPanel::default()
@@ -202,8 +238,8 @@ impl Editor {
 
         if response.inner.clicked_by(PointerButton::Primary) {
             let pos = (
-                rand::random::<usize>() % 50 + 10,
-                rand::random::<usize>() % 50 + 10,
+                rand::random::<usize>() % 20 + 25,
+                rand::random::<usize>() % 20 + 25,
                 rand::random::<usize>() % 20 + 5,
             );
             doc.layers[self.selected_layer]

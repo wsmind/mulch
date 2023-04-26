@@ -25,6 +25,24 @@ impl VoxelGrid {
         (line & (1 << x)) >> x
     }
 
+    pub fn add(&mut self, other: &Self) {
+        for z in 0..64 {
+            for y in 0..64 {
+                let index = z * 64 + y;
+                self.data[index] |= other.data[index];
+            }
+        }
+    }
+
+    pub fn subtract(&mut self, other: &Self) {
+        for z in 0..64 {
+            for y in 0..64 {
+                let index = z * 64 + y;
+                self.data[index] &= !other.data[index];
+            }
+        }
+    }
+
     pub fn paint_cube(&mut self, min: Coords, max: Coords) {
         let min_mask: u64 = (1 << min.0) - 1;
         let max_mask: u64 = (1 << max.0) - 1;

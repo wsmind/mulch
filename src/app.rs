@@ -31,6 +31,9 @@ impl App {
         doc.layers[0].voxel_grid.paint_cube((2, 3, 0), (9, 5, 2));
         doc.layers[0].voxel_grid.paint_cube((4, 1, 0), (7, 8, 1));
         doc.layers[0].voxel_grid.paint_cube((5, 4, 2), (6, 5, 5));
+        doc.layers[0]
+            .voxel_grid
+            .paint_cube((30, 30, 1), (40, 40, 30));
         doc.layers[0].voxel_grid.paint_sphere((6, 6, 6), 2.5);
 
         let mut ui_context = ui::UiContext::new();
