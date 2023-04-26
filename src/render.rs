@@ -2,6 +2,7 @@ mod grid;
 mod shaders;
 mod ui;
 mod view;
+mod voxel;
 
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use wgpu::TextureView;

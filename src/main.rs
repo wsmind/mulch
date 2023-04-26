@@ -5,6 +5,7 @@ mod document;
 mod editor;
 mod render;
 mod ui;
+mod voxels;
 
 fn main() {
     let app = app::App::new();

@@ -2,9 +2,11 @@ use crate::document;
 use crate::render::grid;
 use crate::render::shaders;
 use crate::render::ui;
+use crate::render::voxel;
 
 pub struct ViewRenderer {
     grid_renderer: grid::GridRenderer,
+    voxel_renderer: voxel::VoxelRenderer,
 
     view_constant_buffer: wgpu::Buffer,
 }
@@ -25,8 +27,12 @@ impl ViewRenderer {
         let grid_renderer =
             grid::GridRenderer::new(device, modules, surface_format, &view_constant_buffer);
 
+        let voxel_renderer =
+            voxel::VoxelRenderer::new(device, modules, surface_format, &view_constant_buffer);
+
         Self {
             grid_renderer,
+            voxel_renderer,
             view_constant_buffer,
         }
     }
@@ -88,8 +94,10 @@ impl ViewRenderer {
             );
             pass.set_scissor_rect(view_rect.x, view_rect.y, view_rect.width, view_rect.height);
 
-            // pass.set_pipeline(&self.pipeline);
-            // pass.draw(0..3, 0..1);
+            for layer in &doc.layers {
+                self.voxel_renderer
+                    .draw(queue, &mut pass, &layer.voxel_grid);
+            }
 
             if doc.viewport.grid_enabled {
                 self.grid_renderer.draw(&mut pass);

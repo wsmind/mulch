@@ -28,6 +28,10 @@ impl App {
         let mut renderer = render::Renderer::new(&window, [window_size.width, window_size.height]);
         let mut doc = document::Document::default();
 
+        doc.layers[0].voxel_grid.paint_cube((2, 3, 0), (9, 5, 2));
+        doc.layers[0].voxel_grid.paint_cube((4, 1, 0), (7, 8, 1));
+        doc.layers[0].voxel_grid.paint_cube((5, 4, 2), (6, 5, 5));
+
         let mut ui_context = ui::UiContext::new();
         let mut editor = editor::Editor::new();
 

@@ -1,5 +1,7 @@
 use glam::Vec4Swizzles;
 
+use crate::voxels::VoxelGrid;
+
 pub struct Document {
     pub layers: Vec<Layer>,
     pub viewport: Viewport,
@@ -11,12 +13,15 @@ impl Default for Document {
             layers: vec![
                 Layer {
                     name: "Plop".to_string(),
+                    ..Default::default()
                 },
                 Layer {
                     name: "OtherLayer".to_string(),
+                    ..Default::default()
                 },
                 Layer {
                     name: "Hello!".to_string(),
+                    ..Default::default()
                 },
             ],
             viewport: Viewport::default(),
@@ -26,12 +31,14 @@ impl Default for Document {
 
 pub struct Layer {
     pub name: String,
+    pub voxel_grid: VoxelGrid,
 }
 
 impl Default for Layer {
     fn default() -> Self {
         Self {
             name: "Layer".to_string(),
+            voxel_grid: VoxelGrid::new(),
         }
     }
 }
