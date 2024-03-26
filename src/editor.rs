@@ -269,7 +269,7 @@ impl Editor {
                             let y = grid_position.y as usize;
                             doc.layers[self.selected_layer]
                                 .voxel_grid
-                                .paint_sphere((x, y, 0), 2.3);
+                                .paint_sphere((x, y, 0), 10.0);
                         }
                     }
                 }
