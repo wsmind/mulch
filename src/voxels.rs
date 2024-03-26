@@ -57,9 +57,17 @@ impl VoxelGrid {
     pub fn paint_sphere(&mut self, pos: Coords, radius: f32) {
         let bounds_radius = radius.ceil() as i32;
 
-        for z in -bounds_radius..=bounds_radius {
-            for y in -bounds_radius..=bounds_radius {
-                for x in -bounds_radius..=bounds_radius {
+        let x_min = -bounds_radius - (pos.0 as i32 - bounds_radius).min(0);
+        let y_min = -bounds_radius - (pos.1 as i32 - bounds_radius).min(0);
+        let z_min = -bounds_radius - (pos.2 as i32 - bounds_radius).min(0);
+
+        let x_max = bounds_radius + (63 - pos.0 as i32 - bounds_radius).min(0);
+        let y_max = bounds_radius + (63 - pos.1 as i32 - bounds_radius).min(0);
+        let z_max = bounds_radius + (63 - pos.2 as i32 - bounds_radius).min(0);
+
+        for z in z_min..=z_max {
+            for y in y_min..=y_max {
+                for x in x_min..=x_max {
                     let point = (x as f32, y as f32, z as f32);
                     let distance =
                         (point.0 * point.0 + point.1 * point.1 + point.2 * point.2).sqrt();

@@ -236,6 +236,46 @@ impl Editor {
             })
         }
 
+        if response.inner.dragged_by(PointerButton::Primary) {
+            ctx.input(|input| {
+                if let Some(pos) = input.pointer.interact_pos() {
+                    // normalize viewport pos to clip space (y-inverted)
+                    let pos = 2.0 * (pos - doc.viewport.rect.min) / doc.viewport.rect.size()
+                        - egui::vec2(1.0, 1.0);
+
+                    let (view, projection) =
+                        camera.compute_matrices(doc.viewport.rect.aspect_ratio());
+
+                    // back-project clip space to world space
+                    let direction = view.transpose()
+                        * projection.inverse()
+                        * glam::vec4(pos.x, -pos.y, 0.5, 1.0);
+
+                    // intersect with plane y = 0
+                    if (direction.z * camera.position.z < 0.0) {
+                        let ratio = -camera.position.z / direction.z;
+                        let intersection = egui::vec2(
+                            ratio * direction.x + camera.position.x,
+                            ratio * direction.y + camera.position.y,
+                        );
+                        let grid_position = intersection.round();
+
+                        if grid_position.x >= 0.0
+                            && grid_position.y >= 0.0
+                            && grid_position.x <= 63.0
+                            && grid_position.y <= 63.0
+                        {
+                            let x = grid_position.x as usize;
+                            let y = grid_position.y as usize;
+                            doc.layers[self.selected_layer]
+                                .voxel_grid
+                                .paint_sphere((x, y, 0), 2.3);
+                        }
+                    }
+                }
+            });
+        }
+
         if response.inner.clicked_by(PointerButton::Primary) {
             let pos = (
                 rand::random::<usize>() % 20 + 25,
