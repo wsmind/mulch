@@ -12,7 +12,7 @@ use self::state::EditorState;
 pub struct Editor {
     state: EditorState,
     toolbar: Toolbar,
-    egui_demo: egui_demo_lib::DemoWindows,
+    //egui_demo: egui_demo_lib::DemoWindows,
     selected_layer: usize,
     layer_rename: bool,
     layer_name: String,
@@ -20,7 +20,7 @@ pub struct Editor {
 
 impl Editor {
     pub fn new() -> Self {
-        let egui_demo = egui_demo_lib::DemoWindows::default();
+        //let egui_demo = egui_demo_lib::DemoWindows::default();
 
         let state = EditorState::default();
 
@@ -30,7 +30,7 @@ impl Editor {
             state,
             toolbar,
 
-            egui_demo,
+            //egui_demo,
             selected_layer: 0,
             layer_rename: false,
             layer_name: String::new(),
@@ -252,7 +252,7 @@ impl Editor {
                         * glam::vec4(pos.x, -pos.y, 0.5, 1.0);
 
                     // intersect with plane y = 0
-                    if (direction.z * camera.position.z < 0.0) {
+                    if direction.z * camera.position.z < 0.0 {
                         let ratio = -camera.position.z / direction.z;
                         let intersection = egui::vec2(
                             ratio * direction.x + camera.position.x,
